@@ -69,9 +69,6 @@ server = UcsServer(IPADDR, USERNAME, PASSWORD)
 server.login()
 server.get_cimc_info()
 server.inventory['cimc']
-''' Example output
-{'v6dhcpEnable': 'yes', 'dn': 'sys/rack-unit-1/mgmt/if-1', 'ifType': 'physical', 'vlanPriority': '0', 'vlanEnable': 'no', 'extGw': '10.71.244.254', 'nicMode': 'dedicated', 'id': '1', 'dnsUsingDhcp': 'no', 'subject': 'blade', 'extEnabled': 'yes', 'dnsAlternate': '0.0.0.0', 'v6linkLocal': 'fe80::eef4:cff:fe77:d40', 'extMask': '255.255.255.0', 'hostname': 'e23snsagm-tpaa0001m0', 'v6extIp': '::', 'v6extGw': 'fe80::2de:fbff:fec9:6fe7', 'v6dnsUsingDhcp': 'yes', 'dhcpEnable': 'no', 'nicRedundancy': 'none', 'v6prefix': '64', 'adminNetSpeed': 'auto', 'description': 'Management Interface Network Settings', 'v6extEnabled': 'yes', 'ddnsRefreshInterval': '0', 'vlanId': '1', 'operDuplex': 'full', 'mac': 'EC:F4:0C:77:0D:40', 'v6SlaacIp': '2001:420:5eff:fc44:eef4:cff:fe77:d40', 'autoNeg': 'enabled', 'dnsPreferred': '0.0.0.0', 'ddnsDomain': '', 'ddnsEnable': 'yes', 'vicSlot': 'none', 'v6dnsAlternate': '::', 'v6dnsPreferred': '::', 'portProfile': '', 'extIp': '10.71.244.146', 'adminDuplex': 'auto', 'operNetSpeed': '1Gbps'}
-'''
 server.set_power_state("down", force=true)
 
 ```
