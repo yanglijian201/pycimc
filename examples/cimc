@@ -1,0 +1,148 @@
+#!/usr/bin/env python
+
+from argparse import ArgumentParser, FileType, ArgumentDefaultsHelpFormatter
+from xml.sax.saxutils import escape
+from pprint import pprint
+from pycimc import *
+import json
+
+
+def test(p, argList):
+    print "\n=== Test with %s" % argList
+    r = p.parse_args(args=argList)
+    pprint(vars(r))
+
+
+parent = ArgumentParser(prog = 'cimc',
+               description = 'Control a UCS CIMC interface',
+               epilog = 'For more help, run "cimc <subcommand> [-h|--help]',
+               formatter_class = ArgumentDefaultsHelpFormatter,
+               add_help=False)
+
+parent.add_argument("-h", "--help", action="help", help="Show this help message and exit")
+parent.add_argument('-i', '--ip-address', help = 'IPv4 address of the host', required=True)
+parent.add_argument('-u', '--username', help = 'username', default = 'admin')
+parent.add_argument('-p', '--password', help = 'password', default = 'password')
+
+subcommands = parent.add_subparsers(title = 'Valid subcommands')
+
+# build 'management' subcommand
+subcmd_mgmt = subcommands.add_parser('management',
+                                     description = 'List and modify CIMC manager settings',
+                                     help = 'List and modify CIMC manager settings')
+subcmd_mgmt.set_defaults(func=UcsServer.get_cimc_info)
+subcmd_mgmt.add_argument('-l', '--list',
+                           action='store_true',
+                           help = 'List the current CIMC settings')
+subcmd_mgmt.add_argument('-b', '--brief',
+                               action = 'store_true',
+                               help = 'brief output')
+
+# build 'boot-order' subcommand
+subcmd_boot = subcommands.add_parser('boot-order',
+                                      help = 'List and modify boot order')
+subcmd_boot.set_defaults(func=UcsServer.get_boot_order)
+subcmd_boot.add_argument('-b', '--brief',
+                               action = 'store_true',
+                               help = 'brief output')
+
+# build 'chassis' subcommand
+subcmd_chassis = subcommands.add_parser('chassis',
+                                         help = 'List chassis HW/FW values')
+subcmd_chassis.set_defaults(func=UcsServer.get_chassis_info)
+subcmd_chassis.add_argument('-b', '--brief',
+                               action = 'store_true',
+                               help = 'brief output')
+
+# build 'drives' subcommand
+subcmd_drives = subcommands.add_parser('drives',
+                                        help = 'List and modify physical and virtual drives')
+subcmd_drives.set_defaults(func=UcsServer.get_drive_inventory)
+subcmd_drives.add_argument('-b', '--brief',
+                               action = 'store_true',
+                               help = 'brief output')
+
+# build 'interfaces' subcommand
+subcmd_interfaces = subcommands.add_parser('interfaces',
+                                            help = 'List and modify NIC interface settings',
+                                            description = 'List and modify NIC interface settings')
+subcmd_interfaces.set_defaults(func=UcsServer.get_interface_inventory)
+subcmd_interfaces.add_argument('-b', '--brief',
+                               action='store_const',
+                               const=['id', 'port', 'portId', 'linkState', 'name'],
+                               help = 'brief output')
+
+# build 'pci' subcommand
+subcmd_pci = subcommands.add_parser('pci',
+                                     help = 'List PCI card inventory')
+subcmd_pci.set_defaults(func=UcsServer.get_pci_inventory)
+subcmd_pci.add_argument('-b', '--brief',
+                               action = 'store_true',
+                               help = 'brief output')
+
+# build 'bios' subcommand
+subcmd_bios = subcommands.add_parser('bios',
+                                      help = 'List and modify BIOS settings')
+subcmd_bios.set_defaults(func=UcsServer.get_bios_settings)
+subcmd_bios.add_argument('-b', '--brief',
+                               action = 'store_true',
+                               help = 'brief output')
+
+# build 'users' subcommand
+subcmd_users = subcommands.add_parser('users',
+                                       help = 'List and modify CIMC users')
+subcmd_users.set_defaults(func=UcsServer.get_users)
+subcmd_users.add_argument('-b', '--brief',
+                               action = 'store_true',
+                               help = 'brief output')
+
+# build 'users' subcommand
+subcmd_users = subcommands.add_parser('psu',
+                                       help = 'List PSU inventory and status')
+subcmd_users.set_defaults(func=UcsServer.get_psu_inventory)
+subcmd_users.add_argument('-b', '--brief',
+                               action = 'store_true',
+                               help = 'brief output')
+
+
+args = parent.parse_args()
+# print args
+
+with UcsServer(args.ip_address, escape(args.username), escape(args.password)) as server:
+    print 'Server FW:',server.version
+    args = parent.parse_args()
+    args.func(server)
+    inventory = server.inventory
+    if args.brief and args.func == UcsServer.get_interface_inventory:
+        briefout = []
+        for adaptor in inventory['adaptor']:
+            adaptor_dict = InventoryDict()
+            adaptor_dict['model'] = adaptor['model']
+            adaptor_dict['pciSlot'] = adaptor['pciSlot']
+            adaptor_dict['serial'] = adaptor['serial']
+            adaptor_dict['port'] = []
+            for port in adaptor['port']:
+                temp_port_dict = dict()
+                temp_port_dict['portId'] = port['portId']
+                temp_port_dict['linkState'] = port['linkState']
+                temp_port_dict['mac'] = port['mac']
+                temp_port_dict['vnic'] = []
+                for vnic in port['vnic']:
+                    temp_vnic_dict = dict()
+                    temp_vnic_dict['name'] = vnic['name']
+                    temp_vnic_dict['pxeBoot'] = vnic['pxeBoot']
+                    temp_vnic_dict['mac'] = vnic['mac']
+                    temp_port_dict['vnic'].append(temp_vnic_dict)
+                adaptor_dict['port'].append(temp_port_dict)
+            briefout.append(adaptor_dict)
+        inventory = briefout
+    print json.dumps(inventory, indent=2)
+
+
+'''
+Interesting things to add 'set' methods for later:
+    set_power_state(self, power_state, force=False):
+    create_virtual_drive(self, [args TBD])
+    set_bios_custom(self)
+    set_sol_adminstate(self, state='enable', speed='115200', comport='com0')
+'''
